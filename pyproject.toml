@@ -1,7 +1,17 @@
 [project]
 name = "capstone"
 version = "0.1.0"
-description = "Add your description here"
+description = "Multi-agent call summarization and QA monitoring"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.7",
+    "streamlit>=1.33",
+    "langchain>=0.2",
+    "langgraph>=0.0.66",
+    "langsmith>=0.1.42",
+    "openai>=1.30",
+]
+
+[tool.setuptools]
+packages = ["call_summarizer_agents"]

@@ -1,0 +1,9 @@
+Agent: Hello Alex, thanks for calling. I understand you are asking about a refund for order #123.
+Customer: Yes, the product arrived damaged and I would like to return it.
+Agent: I'm sorry to hear that. I will verify your order and submit a refund request today.
+Customer: Thank you. Will I get a confirmation email?
+Agent: Absolutely, I will email you the case number and a prepaid return label by tomorrow.
+Customer: Great, I appreciate the help.
+Agent: My pleasure. Is there anything else I can help with today?
+Customer: No, that's all.
+Agent: Thank you for calling. Have a good day.
