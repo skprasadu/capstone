@@ -7,6 +7,7 @@ from call_summarizer_agents.agents.intake_agent import CallIntakeAgent
 from call_summarizer_agents.agents.quality_score_agent import QualityScoreAgent
 from call_summarizer_agents.agents.summarization_agent import SummarizationAgent
 from call_summarizer_agents.agents.transcription_agent import TranscriptionAgent
+from call_summarizer_agents.config.settings import AppSettings, load_settings
 from call_summarizer_agents.utils.validation import CallInput, QualityScore, SummaryPayload, TranscriptPayload
 
 
@@ -19,10 +20,19 @@ class RoutingAgent:
         transcription_agent: Optional[TranscriptionAgent] = None,
         summarization_agent: Optional[SummarizationAgent] = None,
         quality_agent: Optional[QualityScoreAgent] = None,
+        settings: AppSettings | None = None,
     ) -> None:
+        self.settings = settings or load_settings()
         self.intake_agent = intake_agent or CallIntakeAgent()
-        self.transcription_agent = transcription_agent or TranscriptionAgent()
-        self.summarization_agent = summarization_agent or SummarizationAgent()
+        self.transcription_agent = transcription_agent or TranscriptionAgent(
+            whisper_api_key=self.settings.whisper_api_key,
+            whisper_model=self.settings.whisper_model,
+        )
+        self.summarization_agent = summarization_agent or SummarizationAgent(
+            openai_api_key=self.settings.openai_api_key,
+            openai_model=self.settings.openai_model,
+            temperature=self.settings.openai_temperature,
+        )
         self.quality_agent = quality_agent or QualityScoreAgent()
 
     def run(self, payload: Dict[str, Any]) -> dict[str, Any]:

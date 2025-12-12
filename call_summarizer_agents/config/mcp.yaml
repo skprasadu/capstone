@@ -19,3 +19,4 @@ agents:
 environment:
   openai_api_key: ${OPENAI_API_KEY}
   langsmith_api_key: ${LANGSMITH_API_KEY}
+  whisper_api_key: ${WHISPER_API_KEY}

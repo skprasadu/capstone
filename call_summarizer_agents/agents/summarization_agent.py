@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from textwrap import shorten
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, Optional
+
+from openai import OpenAI
 
 from call_summarizer_agents.utils.validation import SummaryPayload
 
@@ -10,15 +12,31 @@ from call_summarizer_agents.utils.validation import SummaryPayload
 class SummarizationAgent:
     """Generate summaries and key insights from transcripts."""
 
-    def __init__(self, llm: Any | None = None) -> None:
+    def __init__(
+        self,
+        llm: Any | None = None,
+        openai_api_key: str | None = None,
+        openai_model: str = "gpt-4o-mini",
+        temperature: float = 0.2,
+    ) -> None:
         self.name = "SummarizationAgent"
         self.llm = llm
+        self.openai_model = openai_model
+        self.temperature = temperature
+        self._openai_client: Optional[OpenAI] = (
+            OpenAI(api_key=openai_api_key) if openai_api_key else None
+        )
 
     def __call__(self, payload: Dict[str, Any]) -> SummaryPayload:
         transcript: str = payload["transcript"]
         conversation_id: str = payload.get("conversation_id", "unknown")
 
-        summary = self._run_llm(transcript) if self.llm else self._fallback_summary(transcript)
+        if self.llm:
+            summary = self._run_llm(transcript)
+        elif self._openai_client:
+            summary = self._run_openai(transcript)
+        else:
+            summary = self._fallback_summary(transcript)
         key_points = self._extract_key_points(transcript)
         risks = self._extract_risks(transcript)
         follow_ups = self._extract_followups(transcript)
@@ -40,6 +58,35 @@ class SummarizationAgent:
         )
         response = self.llm.invoke(prompt)
         return getattr(response, "content", str(response))
+
+    def _run_openai(self, transcript: str) -> str:
+        """Invoke OpenAI chat completions when an API key is provided."""
+
+        try:
+            response = self._openai_client.chat.completions.create(
+                model=self.openai_model,
+                temperature=self.temperature,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You summarize contact center calls and return concise, factual bullets."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            "Summarize the following customer support call in four bullet points. "
+                            "Be concise and avoid speculation.\n\n" + transcript
+                        ),
+                    },
+                ],
+            )
+        except Exception:
+            return self._fallback_summary(transcript)
+
+        content = response.choices[0].message.content if response.choices else None
+        return content or self._fallback_summary(transcript)
 
     def _fallback_summary(self, transcript: str) -> str:
         """Deterministic summary used for local testing without an API key."""

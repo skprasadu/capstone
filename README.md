@@ -29,8 +29,14 @@ The pipeline is implemented in `call_summarizer_agents/pipeline.py` and orchestr
    ```
 
 ## Configuration
-- `call_summarizer_agents/config/mcp.yaml` documents agent entrypoints and environment variables for OpenAI and Langsmith integrations.
-- Extend `TranscriptionAgent._pseudo_transcribe` and `SummarizationAgent._run_llm` to call your preferred APIs.
+- Copy `.env.example` to `.env` (or set the variables directly) to provide credentials:
+  ```bash
+  cp .env.example .env
+  # then edit .env to set OPENAI_API_KEY and WHISPER_API_KEY
+  ```
+- `OPENAI_API_KEY` powers the summarization step when available. `WHISPER_API_KEY` enables Whisper audio transcription.
+- `call_summarizer_agents/config/mcp.yaml` documents agent entrypoints and environment variables for OpenAI, Whisper, and Langsmith integrations.
+- Extend `TranscriptionAgent._transcribe_audio` and `SummarizationAgent._run_openai` to customize API usage.
 
 ## Data
 Sample transcript stored at `call_summarizer_agents/data/sample_transcripts/sample_call.txt` can be used for demos and tests.

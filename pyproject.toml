@@ -11,6 +11,7 @@ dependencies = [
     "langgraph>=0.0.66",
     "langsmith>=0.1.42",
     "openai>=1.30",
+    "pydantic-settings>=2.7",
 ]
 
 [tool.setuptools]
