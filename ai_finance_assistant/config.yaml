@@ -1,0 +1,27 @@
+app:
+  name: "AI Finance Assistant"
+  environment: "development"
+  disclaimer: "This tool provides educational content only and does not constitute financial advice."
+
+llm:
+  provider: "openai"
+  model: "gpt-4o-mini"
+  temperature: 0.2
+  max_tokens: 512
+
+rag:
+  vector_store: "chroma"
+  embedder: "text-embedding-3-small"
+  top_k: 5
+
+market_data:
+  provider: "alpha_vantage"
+  api_key: "YOUR_ALPHA_VANTAGE_KEY"
+  fallback_provider: "yfinance"
+
+features:
+  portfolio_analysis: true
+  market_overview: true
+  goal_planning: true
+  news_summaries: true
+  tax_education: true

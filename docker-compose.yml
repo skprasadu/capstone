@@ -1,10 +1,24 @@
 version: "3.9"
 services:
-  streamlit:
-    build: .
+  call-summarizer:
+    build:
+      context: .
+      dockerfile: Dockerfile.cca
     command: streamlit run call_summarizer_agents/ui/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
     ports:
       - "8501:8501"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+
+  ai-finance-assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile.fa
+    command: streamlit run ai_finance_assistant/src/web_app/streamlit_app.py --server.port=8502 --server.address=0.0.0.0
+    ports:
+      - "8502:8502"
     volumes:
       - .:/app
     env_file:
