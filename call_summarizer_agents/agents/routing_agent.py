@@ -34,7 +34,11 @@ class RoutingAgent:
             openai_model=self.settings.openai_model,
             temperature=self.settings.openai_temperature,
         )
-        self.quality_agent = quality_agent or QualityScoreAgent()
+        self.quality_agent = quality_agent or QualityScoreAgent(
+            openai_api_key=self.settings.openai_api_key,
+            openai_model=self.settings.openai_model,
+            temperature=0.0,
+        )
 
     def run(self, payload: Dict[str, Any]) -> dict[str, Any]:
         """Execute the multi-step pipeline with fallbacks."""

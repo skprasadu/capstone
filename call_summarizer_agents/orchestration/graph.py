@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Optional
+from uuid import uuid4
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
@@ -33,7 +34,11 @@ class CallSummarizerGraph:
     ) -> None:
         self.settings = settings or load_settings()
 
-        self.intake_agent = intake_agent or CallIntakeAgent()
+        self.intake_agent = intake_agent or CallIntakeAgent(
+            openai_api_key=self.settings.openai_api_key,
+            openai_model=self.settings.openai_model,
+            temperature=0.0,
+        )
 
         whisper_key = self.settings.whisper_api_key or self.settings.openai_api_key
         self.transcription_agent = transcription_agent or TranscriptionAgent(
@@ -55,6 +60,7 @@ class CallSummarizerGraph:
 
         # Memory/persistence layer (in-process). For durable memory, swap to sqlite/postgres later.
         self.checkpointer = checkpointer or InMemorySaver()
+        self._conversation_index: dict[str, RunRecord] = {}
 
         workflow = self._build()
         self.graph = workflow.compile(checkpointer=self.checkpointer)
@@ -64,13 +70,15 @@ class CallSummarizerGraph:
 
         g.add_node("intake", self._node_intake)
         g.add_node("transcribe", self._node_transcribe)
+        g.add_node("enrich", self._node_enrich)
         g.add_node("summarize", self._node_summarize)
         g.add_node("quality", self._node_quality)
         g.add_node("finalize", self._node_finalize)
 
         g.add_edge(START, "intake")
         g.add_edge("intake", "transcribe")
-        g.add_edge("transcribe", "summarize")
+        g.add_edge("transcribe", "enrich")
+        g.add_edge("enrich", "summarize")
         g.add_edge("summarize", "quality")
         g.add_edge("quality", "finalize")
         g.add_edge("finalize", END)
@@ -145,6 +153,9 @@ class CallSummarizerGraph:
         run_record: RunRecord = {
             "at": datetime.now(timezone.utc).isoformat(),
             "conversation_id": state["metadata"].get("conversation_id") or "unknown",
+            "agent_name": state["metadata"].get("agent_name"),
+            "customer_name": state["metadata"].get("customer_name"),
+            "channel": state["metadata"].get("channel") or "unknown",
             "summary": state["summary"].get("summary") or "",
             "overall": state["quality"].get("overall"),
         }
@@ -161,7 +172,12 @@ class CallSummarizerGraph:
     # -------------------------
 
     def run(self, payload: dict[str, Any]) -> dict[str, Any]:
-        conversation_id = str(payload.get("conversation_id") or "unknown").strip()
+        conversation_id = str(payload.get("conversation_id") or "").strip()
+        if not conversation_id:
+            conversation_id = f"conv-{uuid4().hex[:8]}"
+
+        payload = {**payload, "conversation_id": conversation_id}
+
         config = {
             "configurable": {"thread_id": conversation_id},
             "tags": ["call-summarizer", str(payload.get("channel") or "unknown")],
@@ -173,8 +189,13 @@ class CallSummarizerGraph:
             "run_name": "call-summarizer-graph",
         }
 
-        # thread_id is what the checkpointer uses to store/retrieve state and history  [oai_citation:3‡LangChain Docs](https://docs.langchain.com/oss/python/langgraph/persistence)
         final_state: CallState = self.graph.invoke({"raw_payload": payload}, config)
+
+        # Remember last run for sidebar list
+        runs = list(final_state.get("runs") or [])
+        if runs:
+            self._conversation_index[conversation_id] = runs[-1]
+
         return final_state["result"]
 
     def get_runs(self, conversation_id: str) -> list[RunRecord]:
@@ -185,3 +206,39 @@ class CallSummarizerGraph:
     def get_state_history(self, conversation_id: str) -> list[Any]:
         config = {"configurable": {"thread_id": conversation_id}}
         return list(self.graph.get_state_history(config))  # full checkpoint history  [oai_citation:5‡LangChain Docs](https://docs.langchain.com/oss/python/langgraph/persistence)
+    
+    def list_conversations(self) -> list[RunRecord]:
+        # newest first
+        return sorted(
+            self._conversation_index.values(),
+            key=lambda r: r.get("at", ""),
+            reverse=True,
+        )
+    
+    def _node_enrich(self, state: CallState) -> dict[str, Any]:
+        metadata = dict(state.get("metadata") or {})
+        transcript_text = (state.get("transcript") or {}).get("transcript") or ""
+
+        # Update flags now that transcript exists
+        metadata["has_transcript"] = bool(transcript_text.strip())
+
+        # Only fill names if missing
+        existing_agent = metadata.get("agent_name")
+        existing_customer = metadata.get("customer_name")
+        agent_name, customer_name = self.intake_agent.infer_participants(
+            transcript_text,
+            agent_name=existing_agent,
+            customer_name=existing_customer,
+        )
+
+        if existing_agent is None and agent_name:
+            metadata["agent_name"] = agent_name
+        if existing_customer is None and customer_name:
+            metadata["customer_name"] = customer_name
+
+        return {"metadata": metadata}
+    
+    def get_latest_result(self, conversation_id: str):
+        config = {"configurable": {"thread_id": conversation_id}}
+        snapshot = self.graph.get_state(config)
+        return snapshot.values.get("result")

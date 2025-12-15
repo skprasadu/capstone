@@ -8,9 +8,11 @@ from typing_extensions import TypedDict
 class RunRecord(TypedDict):
     at: str
     conversation_id: str
+    agent_name: str | None
+    customer_name: str | None
+    channel: str
     summary: str
     overall: int | None
-
 
 class CallState(TypedDict, total=False):
     # Input

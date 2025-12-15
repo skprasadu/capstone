@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from call_summarizer_agents.config.settings import AppSettings, load_settings
 from call_summarizer_agents.orchestration.graph import CallSummarizerGraph
-
+from call_summarizer_agents.orchestration.state import RunRecord
 
 class CallSummarizationPipeline:
     """Friendly API surface around the LangGraph workflow."""
@@ -30,3 +30,9 @@ class CallSummarizationPipeline:
 
     def get_state_history(self, conversation_id: str):
         return self.graph_runner.get_state_history(conversation_id)
+    
+    def list_conversations(self) -> list[RunRecord]:
+        return self.graph_runner.list_conversations()
+    
+    def get_latest_result(self, conversation_id: str):
+        return self.graph_runner.get_latest_result(conversation_id)

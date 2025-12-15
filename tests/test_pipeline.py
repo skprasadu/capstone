@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from call_summarizer_agents.config.settings import AppSettings
 from call_summarizer_agents.pipeline import CallSummarizationPipeline
 
 
@@ -16,8 +16,8 @@ def test_pipeline_runs_with_sample_transcript():
         "audio_path": SAMPLE_TRANSCRIPT,
         "transcript": transcript,
     }
-
-    pipeline = CallSummarizationPipeline()
+    settings = AppSettings(openai_api_key=None, whisper_api_key=None)
+    pipeline = CallSummarizationPipeline(settings=settings)
     result = pipeline.run(payload)
 
     assert set(result.keys()) == {"metadata", "transcript", "summary", "quality"}
