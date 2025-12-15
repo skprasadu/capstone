@@ -12,7 +12,19 @@ A modular, multi-agent pipeline that converts raw call data into summaries and q
 
 The pipeline is implemented in `call_summarizer_agents/pipeline.py` and orchestrated through the `RoutingAgent`.
 
-## Quickstart
+## Quickstart (Docker Compose)
+1. Copy the environment template and fill in API keys (optional for local testing):
+   ```bash
+   cp .env.example .env
+   # set OPENAI_API_KEY and WHISPER_API_KEY for real model calls
+   ```
+2. Build and start the Streamlit app:
+   ```bash
+   docker compose up --build
+   ```
+3. Open http://localhost:8501. You can upload a `.wav` file for transcription + summarization or paste a chat transcript and ask for a summary/quality review directly in the UI.
+
+## Local Development
 1. Create a virtual environment and install dependencies:
    ```bash
    uv venv
@@ -40,3 +52,10 @@ The pipeline is implemented in `call_summarizer_agents/pipeline.py` and orchestr
 
 ## Data
 Sample transcript stored at `call_summarizer_agents/data/sample_transcripts/sample_call.txt` can be used for demos and tests.
+
+## Testing
+- Run the unit suite with pytest:
+  ```bash
+  pytest
+  ```
+- Tests cover validation rules, deterministic agent fallbacks, and the full graph pipeline using the sample transcript to ensure the app works without external API keys.
