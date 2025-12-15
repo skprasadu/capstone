@@ -12,6 +12,7 @@ dependencies = [
     "langsmith>=0.1.42",
     "openai>=1.30",
     "pydantic-settings>=2.7",
+    "pytest>=8.2",
 ]
 
 [tool.setuptools]
