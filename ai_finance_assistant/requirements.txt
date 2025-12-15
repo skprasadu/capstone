@@ -1,0 +1,11 @@
+# The AI Finance Assistant shares the root project dependencies.
+# Installing from the repository root will satisfy these requirements via pyproject.toml.
+pydantic>=2.7
+streamlit>=1.33
+langchain>=0.2
+langgraph>=0.0.66
+langsmith>=0.1.42
+openai>=1.30
+pydantic-settings>=2.7
+pytest>=8.2
+pyyaml>=6.0
