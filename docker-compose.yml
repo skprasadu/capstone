@@ -7,7 +7,5 @@ services:
       - "8501:8501"
     volumes:
       - .:/app
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
-      - WHISPER_API_KEY=${WHISPER_API_KEY}
+    env_file:
+      - .env

@@ -5,6 +5,10 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from openai import OpenAI
+try:
+    from langsmith.wrappers import wrap_openai
+except Exception:
+    wrap_openai = None
 
 from call_summarizer_agents.utils.validation import TranscriptPayload, ensure_file, normalize_transcript_text
 from call_summarizer_agents.utils.debug import dlog
@@ -21,8 +25,12 @@ class TranscriptionAgent:
         self.name = "TranscriptionAgent"
         self.engine = engine
         self.whisper_model = whisper_model
+
+        client = OpenAI(api_key=whisper_api_key) if whisper_api_key else None
+        if client and wrap_openai:
+            client = wrap_openai(client)
         self._openai_client: Optional[OpenAI] = (
-            OpenAI(api_key=whisper_api_key) if whisper_api_key else None
+            client
         )
 
     def __call__(self, payload: Dict[str, Any]) -> TranscriptPayload:

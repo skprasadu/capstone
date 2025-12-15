@@ -7,7 +7,10 @@ from typing import Any, Dict, Iterable, Optional
 from openai import OpenAI
 
 from call_summarizer_agents.utils.validation import SummaryPayload
-
+try:
+    from langsmith.wrappers import wrap_openai
+except Exception:
+    wrap_openai = None
 
 class SummarizationAgent:
     """Generate summaries and key insights from transcripts."""
@@ -23,8 +26,11 @@ class SummarizationAgent:
         self.llm = llm
         self.openai_model = openai_model
         self.temperature = temperature
+        client = OpenAI(api_key=openai_api_key) if openai_api_key else None
+        if client and wrap_openai:
+            client = wrap_openai(client)
         self._openai_client: Optional[OpenAI] = (
-            OpenAI(api_key=openai_api_key) if openai_api_key else None
+            client
         )
 
     def __call__(self, payload: Dict[str, Any]) -> SummaryPayload:

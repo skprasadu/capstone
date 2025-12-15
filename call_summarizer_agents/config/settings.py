@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 from pathlib import Path
 
@@ -11,6 +11,12 @@ from call_summarizer_agents.utils.debug import dlog
 
 class AppSettings(BaseSettings):
     """Centralized configuration for external integrations."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="",
+        extra="ignore",   # <- key change: allow LANGSMITH_* in .env
+    )
 
     openai_api_key: str | None = Field(
         default=None, description="API key used for OpenAI-powered summarization"
@@ -28,10 +34,6 @@ class AppSettings(BaseSettings):
     whisper_model: str = Field(
         default="whisper-1", description="Model used for audio-to-text transcription"
     )
-
-    class Config:
-        env_file = ".env"
-        env_prefix = ""
 
 
 def load_settings() -> AppSettings:

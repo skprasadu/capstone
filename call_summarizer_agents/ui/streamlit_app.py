@@ -8,6 +8,8 @@ import streamlit as st
 
 from call_summarizer_agents.pipeline import CallSummarizationPipeline
 from call_summarizer_agents.utils.debug import dlog
+import os
+print( "langsmith env flags:", os.getenv("LANGSMITH_TRACING"), os.getenv("LANGSMITH_PROJECT"))
 
 st.set_page_config(page_title="Call Summarizer", layout="wide")
 st.title("📞 Call Summarizer & QA Monitor")
