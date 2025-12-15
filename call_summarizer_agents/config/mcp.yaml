@@ -1,0 +1,22 @@
+version: "1.0"
+project: call-summarizer-agents
+agents:
+  intake:
+    type: python
+    entrypoint: call_summarizer_agents.agents.intake_agent:CallIntakeAgent
+  transcription:
+    type: python
+    entrypoint: call_summarizer_agents.agents.transcription_agent:TranscriptionAgent
+  summarization:
+    type: python
+    entrypoint: call_summarizer_agents.agents.summarization_agent:SummarizationAgent
+  quality:
+    type: python
+    entrypoint: call_summarizer_agents.agents.quality_score_agent:QualityScoreAgent
+  routing:
+    type: python
+    entrypoint: call_summarizer_agents.agents.routing_agent:RoutingAgent
+environment:
+  openai_api_key: ${OPENAI_API_KEY}
+  langsmith_api_key: ${LANGSMITH_API_KEY}
+  whisper_api_key: ${WHISPER_API_KEY}
