@@ -47,7 +47,11 @@ class CallSummarizerGraph:
             temperature=self.settings.openai_temperature,
         )
 
-        self.quality_agent = quality_agent or QualityScoreAgent()
+        self.quality_agent = quality_agent or QualityScoreAgent(
+            openai_api_key=self.settings.openai_api_key,
+            openai_model=self.settings.openai_model,
+            temperature=0.0,
+        )
 
         # Memory/persistence layer (in-process). For durable memory, swap to sqlite/postgres later.
         self.checkpointer = checkpointer or InMemorySaver()
