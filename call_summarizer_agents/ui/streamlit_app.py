@@ -7,20 +7,23 @@ from pathlib import Path
 import streamlit as st
 
 from call_summarizer_agents.pipeline import CallSummarizationPipeline
+from call_summarizer_agents.utils.debug import dlog
 
 st.set_page_config(page_title="Call Summarizer", layout="wide")
 st.title("📞 Call Summarizer & QA Monitor")
 
 st.sidebar.header("Call Metadata")
 conversation_id = st.sidebar.text_input("Conversation ID", value="demo-call-001")
-agent_name = st.sidebar.text_input("Agent Name", value="Jamie Agent")
-customer_name = st.sidebar.text_input("Customer Name", value="Alex Customer")
 channel = st.sidebar.selectbox("Channel", ["voice", "chat"], index=0)
+
+with st.sidebar.expander("Optional metadata overrides", expanded=False):
+    agent_name = st.text_input("Agent Name", value="")
+    customer_name = st.text_input("Customer Name", value="")
 
 uploaded_audio = st.file_uploader("Upload call recording (optional)", type=["wav", "mp3", "txt"])
 transcript_text = st.text_area(
     "Paste transcript (optional)",
-    value="Hello Alex, thanks for calling. I understand you need a refund for your order...",
+    value="",
     height=200,
 )
 
@@ -29,17 +32,22 @@ run_button = st.button("Generate Summary")
 if run_button:
     audio_path = None
     if uploaded_audio:
+        data = uploaded_audio.getvalue()
+        dlog("ui.upload", filename=uploaded_audio.name, uploaded_bytes=len(data))
+
         temp_path = Path(f"/tmp/{uploaded_audio.name}")
-        temp_path.write_bytes(uploaded_audio.getvalue())
+        temp_path.write_bytes(data)
+        dlog("ui.tmp_written", path=str(temp_path), size_bytes=temp_path.stat().st_size)
+
         audio_path = temp_path
 
     payload = {
-        "conversation_id": conversation_id,
-        "agent_name": agent_name,
-        "customer_name": customer_name,
+        "conversation_id": conversation_id.strip(),
+        "agent_name": agent_name.strip() or None,
+        "customer_name": customer_name.strip() or None,
         "channel": channel,
         "audio_path": audio_path,
-        "transcript": transcript_text or None,
+        "transcript": transcript_text.strip() or None,
     }
 
     pipeline = CallSummarizationPipeline()

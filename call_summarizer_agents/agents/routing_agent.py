@@ -24,8 +24,9 @@ class RoutingAgent:
     ) -> None:
         self.settings = settings or load_settings()
         self.intake_agent = intake_agent or CallIntakeAgent()
-        self.transcription_agent = transcription_agent or TranscriptionAgent(
-            whisper_api_key=self.settings.whisper_api_key,
+        whisper_key = self.settings.whisper_api_key or self.settings.openai_api_key
+        self.transcription_agent = TranscriptionAgent(
+            whisper_api_key=whisper_key,
             whisper_model=self.settings.whisper_model,
         )
         self.summarization_agent = summarization_agent or SummarizationAgent(

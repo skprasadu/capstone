@@ -11,8 +11,12 @@ class CallInput(BaseModel):
     """Validated input for the call pipeline."""
 
     conversation_id: str = Field(..., description="Unique identifier for the call session")
-    agent_name: str = Field(..., description="Contact center agent who handled the call")
-    customer_name: str = Field(..., description="Customer involved in the interaction")
+    agent_name: Optional[str] = Field(
+        None, description="Contact center agent who handled the call (optional)"
+    )
+    customer_name: Optional[str] = Field(
+        None, description="Customer involved in the interaction (optional)"
+    )
     audio_path: Optional[Path] = Field(
         None, description="Optional local path to the recorded call audio file"
     )

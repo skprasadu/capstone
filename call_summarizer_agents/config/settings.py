@@ -3,6 +3,10 @@ from __future__ import annotations
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
+import os
+from pathlib import Path
+
+from call_summarizer_agents.utils.debug import dlog
 
 
 class AppSettings(BaseSettings):
@@ -31,7 +35,21 @@ class AppSettings(BaseSettings):
 
 
 def load_settings() -> AppSettings:
-    """Load application settings from environment variables or a .env file."""
+    dlog(
+        "settings.load",
+        cwd=os.getcwd(),
+        env_path=str(Path(".env").resolve()),
+        env_exists=Path(".env").exists(),
+    )
 
-    return AppSettings()
+    s = AppSettings()
 
+    dlog(
+        "settings.values",
+        openai_api_key_present=bool(s.openai_api_key),
+        whisper_api_key_present=bool(s.whisper_api_key),
+        whisper_api_key_suspicious=bool(s.whisper_api_key) and str(s.whisper_api_key).strip().startswith("$"),
+        openai_model=s.openai_model,
+        whisper_model=s.whisper_model,
+    )
+    return s
