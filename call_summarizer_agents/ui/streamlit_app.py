@@ -19,13 +19,11 @@ st.sidebar.header("Conversations")
 cards = pipeline.list_conversations()
 index = {c["conversation_id"]: c for c in cards}
 
-cards = pipeline.list_conversations()
-index = {c["conversation_id"]: c for c in cards}
-
 options = ["(new)"] + list(index.keys())
 
 st.session_state.setdefault("selected_conversation", "(new)")
 
+# Safe "jump" pattern to avoid StreamlitAPIException
 if "_jump_to_conversation" in st.session_state:
     target = st.session_state.pop("_jump_to_conversation")
     st.session_state["selected_conversation"] = target if target in options else "(new)"
@@ -46,39 +44,64 @@ if selected != "(new)":
 if selected == "(new)":
     st.subheader("New run")
 
-    uploaded_audio = st.file_uploader("Upload recording (optional)", type=["wav", "mp3", "txt"])
-    transcript_text = st.text_area("Paste transcript (optional)", value="", height=220)
+    # ChatGPT-like composer row: [+] + one text area + Send
+    col_attach, col_text, col_send = st.columns([1, 10, 1], vertical_alignment="bottom")
 
-    run_button = st.button("Generate Summary")
+    with col_attach:
+        # Popover keeps the UI clean (no giant dropzone on screen)
+        with st.popover("➕", help="Attach audio (.wav/.mp3)"):
+            uploaded_audio = st.file_uploader(
+                "Attach audio",
+                type=["wav", "mp3"],
+                accept_multiple_files=False,
+                key="composer_attachment",
+                label_visibility="collapsed",
+            )
+            if uploaded_audio:
+                st.caption(f"Attached: {uploaded_audio.name}")
+
+    with col_text:
+        transcript_text = st.text_area(
+            "Message",
+            value="",
+            height=140,
+            placeholder="Paste transcript here… or click ➕ to attach audio.",
+            key="composer_text",
+            label_visibility="collapsed",
+        )
+
+    with col_send:
+        run_button = st.button("Send", use_container_width=True)
 
     if run_button:
-        if not uploaded_audio and not transcript_text.strip():
-            st.error("Provide transcript text or upload an audio/text file.")
+        typed = (transcript_text or "").strip()
+        attached = st.session_state.get("composer_attachment")
+
+        if not typed and not attached:
+            st.error("Paste transcript text or attach an audio file.")
             st.stop()
 
         audio_path = None
-        if uploaded_audio:
-            data = uploaded_audio.getvalue()
-            dlog("ui.upload", filename=uploaded_audio.name, uploaded_bytes=len(data))
-            temp_path = Path(f"/tmp/{uploaded_audio.name}")
+        if attached:
+            data = attached.getvalue()
+            dlog("ui.upload", filename=attached.name, uploaded_bytes=len(data))
+            temp_path = Path(f"/tmp/{attached.name}")
             temp_path.write_bytes(data)
             audio_path = temp_path
 
+        # Rule: transcript wins (if you paste text + attach audio, we use the pasted text)
         payload = {
-            "channel": "voice" if audio_path else "chat",
-            "audio_path": audio_path,
-            "transcript": transcript_text.strip() or None,
+            "channel": "voice" if (audio_path and not typed) else "chat",
+            "audio_path": audio_path if not typed else None,
+            "transcript": typed or None,
         }
 
         with st.spinner("Running pipeline..."):
             result = pipeline.run(payload)
 
-        # Switch UX to read-only view of the created conversation
         new_id = result["metadata"]["conversation_id"]
         st.session_state["_jump_to_conversation"] = new_id
         st.rerun()
-
-    st.info("Start a new run by pasting a transcript or uploading audio.")
 
 else:
     st.subheader(f"Conversation: {selected} (read-only)")
@@ -88,7 +111,6 @@ else:
         st.warning("No stored state found for this conversation.")
         st.stop()
 
-    # Show everything: metadata + transcript + summary + quality + raw json
     st.subheader("Metadata")
     st.json(result.get("metadata", {}))
 
