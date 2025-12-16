@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 *.egg-info/
 **/chroma_data
+**/.pytest_cache
+**/.mypy_cache
