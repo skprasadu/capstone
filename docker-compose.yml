@@ -23,3 +23,21 @@ services:
       - .:/app
     env_file:
       - .env
+    depends_on:
+      - chroma
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_COLLECTION=finance_kb
+
+  # NEW: ChromaDB server
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=${ANONYMIZED_TELEMETRY:-FALSE}

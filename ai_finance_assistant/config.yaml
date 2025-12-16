@@ -13,6 +13,10 @@ rag:
   vector_store: "chroma"
   embedder: "text-embedding-3-small"
   top_k: 5
+  # NEW defaults (overridden by CHROMA_HOST/CHROMA_PORT/CHROMA_COLLECTION)
+  chroma_host: "localhost"
+  chroma_port: 8000
+  collection: "finance_kb"
 
 market_data:
   provider: "alpha_vantage"

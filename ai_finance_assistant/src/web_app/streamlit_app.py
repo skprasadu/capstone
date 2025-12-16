@@ -58,3 +58,10 @@ articles = seed_articles()
 st.table({"Title": [a.title for a in articles], "Category": [a.category for a in articles]})
 
 st.caption(f"⚠️ {FINANCE_DISCLAIMER}")
+
+st.header("Market data (Alpha Vantage)")
+
+symbol = st.text_input("Symbol", value="IBM")
+if st.button("Fetch quote"):
+    from ai_finance_assistant.src.market.alpha_vantage import global_quote
+    st.json(global_quote(symbol.strip().upper()))
