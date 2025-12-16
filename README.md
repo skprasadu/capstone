@@ -109,6 +109,3 @@ If you want traces:
 
 ``` bash
 ---
-
-# 7) (Optional but recommended) Fix the test that hardcodes “6 agents”
-Your current test expects `len(registry) == 6`. You now have **7** (adds stock_quote).
