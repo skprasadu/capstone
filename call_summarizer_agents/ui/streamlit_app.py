@@ -116,7 +116,7 @@ else:
 
     st.subheader("Transcript")
     transcript = (result.get("transcript") or {}).get("transcript") or ""
-    st.text_area("Transcript (read-only)", value=transcript, height=320, disabled=True)
+    st.write(transcript)
 
     st.subheader("Summary")
     st.write((result.get("summary") or {}).get("summary") or "")
