@@ -6,7 +6,7 @@ from ai_finance_assistant.src.utils.config_loader import load_config
 
 def test_registry_contains_all_agents():
     registry = build_registry()
-    assert len(registry) == 6
+    assert len(registry) >= 6
     assert {agent.name for agent in registry.values()} >= {
         "Finance Q&A Agent",
         "Portfolio Analysis Agent",

@@ -59,3 +59,56 @@ Sample transcript stored at `call_summarizer_agents/data/sample_transcripts/samp
   pytest
   ```
 - Tests cover validation rules, deterministic agent fallbacks, and the full graph pipeline using the sample transcript to ensure the app works without external API keys.
+
+# AI Finance Assistant (Simple)
+
+One textbox. The assistant routes your question to the right agent.
+LangGraph stores state so the left sidebar shows conversations + run history.
+
+## 1) Start (Docker Compose)
+From repo root:
+```bash
+cp .env.template .env
+# set:
+# OPENAI_API_KEY=...
+# ALPHA_VANTAGE_API_KEY=...   (only needed for stock quotes)
+
+docker compose up --build
+```
+
+Open:
+	•	Finance Assistant: http://localhost:8502
+	•	Chroma: http://localhost:8000
+
+## 2) Ingest seed docs into Chroma
+
+```bash
+docker compose exec ai-finance-assistant python -m ai_finance_assistant.src.rag.ingest --source seed --reset
+```
+
+## 3) What to ask (routing map)
+
+| Example question | Routed agent |
+| --- | --- |
+| What is an index fund? | Finance Q&A Agent |
+| Can you review my portfolio allocation? | Portfolio Analysis Agent |
+| What does market volatility mean? | Market Analysis Agent |
+| Help me plan a 5-year goal to buy a house | Goal Planning Agent |
+| Summarize this headline for me | News Synthesizer Agent |
+| Explain the difference between a 401k and IRA | Tax Education Agent |
+| What is the stock price of IBM? | Stock Quote Agent (Alpha Vantage) |
+
+Notes:
+* RAG answers use Chroma (and fallback docs if Chroma/keys are missing).
+* Stock quotes require ALPHA_VANTAGE_API_KEY in .env.
+
+## Optional: LangSmith tracing
+
+If you want traces:
+  * set LANGSMITH_API_KEY and LANGCHAIN_TRACING_V2=true in .env
+
+``` bash
+---
+
+# 7) (Optional but recommended) Fix the test that hardcodes “6 agents”
+Your current test expects `len(registry) == 6`. You now have **7** (adds stock_quote).

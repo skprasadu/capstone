@@ -1,67 +1,106 @@
+from __future__ import annotations
+
+import json
 import streamlit as st
 
-from ai_finance_assistant.src.core.architecture import bootstrap_blueprint
-from ai_finance_assistant.src.core.disclaimers import FINANCE_DISCLAIMER
-from ai_finance_assistant.src.data.knowledge_base import seed_articles
-from ai_finance_assistant.src.utils.config_loader import load_config
-from ai_finance_assistant.src.workflow.router import route_query
+from ai_finance_assistant.src.pipeline import FinanceAssistantPipeline
 
 st.set_page_config(page_title="AI Finance Assistant", layout="wide")
+st.title("AI Finance Assistant")
 
-config = load_config()
-blueprint = bootstrap_blueprint()
+pipeline = FinanceAssistantPipeline()
 
-st.sidebar.title("Assistant Controls")
-st.sidebar.success(config["app"]["disclaimer"])
-st.sidebar.markdown("**Environment:** %s" % config["app"].get("environment", "development"))
-st.sidebar.markdown("**LLM Provider:** %s" % config["llm"]["provider"])
-st.sidebar.markdown("**Vector Store:** %s" % config["rag"]["vector_store"])
+# ---- Sidebar: Conversations so far (same UX as call_summarizer) ----
+st.sidebar.header("Conversations")
 
-st.title("AI Finance Assistant (Prototype)")
-st.caption(
-    "Multi-agent financial education workspace. Responses are educational only; not financial advice."
-)
+cards = pipeline.list_conversations()
+index = {c["conversation_id"]: c for c in cards}
 
-st.header("Try a prompt")
-with st.form("query-form"):
-    user_query = st.text_area(
-        "Ask a question or describe a goal",
-        placeholder="e.g., How should I think about diversification for a retirement portfolio?",
+options = ["(new)"] + list(index.keys())
+
+st.session_state.setdefault("selected_conversation", "(new)")
+
+# Safe jump (avoids StreamlitAPIException)
+if "_jump_to_conversation" in st.session_state:
+    target = st.session_state.pop("_jump_to_conversation")
+    st.session_state["selected_conversation"] = target if target in options else "(new)"
+
+selected = st.sidebar.selectbox("Select", options, key="selected_conversation")
+
+if selected != "(new)":
+    c = index[selected]
+    st.sidebar.caption(
+        f'{c.get("agent_name") or "?"}'
+        + (f' | {c.get("symbol")}' if c.get("symbol") else "")
     )
-    submitted = st.form_submit_button("Send to Assistant")
+    st.sidebar.subheader("Run history")
+    for r in reversed(pipeline.get_runs(selected)[-10:]):
+        st.sidebar.write(f'{r["at"][:19]}  | {r.get("agent_id")}')
 
-if submitted and user_query.strip():
-    result = route_query(user_query)
-    st.subheader(f"Agent: {result.agent.name}")
-    st.markdown(f"**Why routed here:** {result.reasoning}")
-    st.markdown("---")
-    st.write(result.content)
+# ---- Main: two experiences ----
+if selected == "(new)":
+    st.subheader("New question")
+
+    user_query = st.text_area(
+        "Ask anything (one box)",
+        placeholder="e.g., What is an index fund? / What is the stock price of IBM?",
+        height=140,
+    )
+
+    send = st.button("Send")
+
+    if send:
+        if not user_query.strip():
+            st.error("Enter a question.")
+            st.stop()
+
+        with st.spinner("Running..."):
+            result = pipeline.run({"query": user_query.strip()})
+
+        new_id = result["metadata"]["conversation_id"]
+        st.session_state["_jump_to_conversation"] = new_id
+        st.rerun()
+
+    st.info("Enter a prompt. The assistant will route to the right agent automatically.")
+
 else:
-    st.info("Enter a prompt to see which agent responds and how retrieval is used.")
+    st.subheader(f"Conversation: {selected} (read-only)")
 
-st.header("Agent roster")
-for capability in blueprint.capabilities:
-    st.markdown(f"- **{capability.name}:** {capability.description} (Endpoints: {', '.join(capability.endpoints)})")
+    result = pipeline.get_latest_result(selected)
+    if not result:
+        st.warning("No stored state found for this conversation.")
+        st.stop()
 
-st.subheader("Registered agents")
-for agent in blueprint.agents.values():
-    with st.expander(agent.name, expanded=False):
-        st.write(agent.description)
-        st.write("**Responsibilities:**")
-        st.write("\n".join(f"- {item}" for item in agent.responsibilities))
-        st.write("**Output style:**", agent.output_format)
-        if agent.safety_notes:
-            st.warning("\n".join(agent.safety_notes))
+    st.subheader("Request")
+    st.text_area(
+        "Query (read-only)",
+        value=(result.get("request") or {}).get("query") or "",
+        height=120,
+        disabled=True,
+    )
 
-st.header("Seed knowledge base")
-articles = seed_articles()
-st.table({"Title": [a.title for a in articles], "Category": [a.category for a in articles]})
+    st.subheader("Routing")
+    route = result.get("route") or {}
+    st.json(route)
 
-st.caption(f"⚠️ {FINANCE_DISCLAIMER}")
+    st.subheader("Answer")
+    st.write(result.get("answer") or "")
 
-st.header("Market data (Alpha Vantage)")
+    retrieval = result.get("retrieval") or {}
+    docs = retrieval.get("docs") or []
+    if docs:
+        st.subheader("Retrieved docs")
+        st.table(
+            {
+                "Title": [d.get("title", "") for d in docs],
+                "URL": [d.get("url", "") for d in docs],
+            }
+        )
 
-symbol = st.text_input("Symbol", value="IBM")
-if st.button("Fetch quote"):
-    from ai_finance_assistant.src.market.alpha_vantage import global_quote
-    st.json(global_quote(symbol.strip().upper()))
+    market = result.get("market") or {}
+    if market:
+        st.subheader("Market data")
+        st.json(market)
+
+    st.subheader("Raw output")
+    st.code(json.dumps(result, indent=2, default=str))

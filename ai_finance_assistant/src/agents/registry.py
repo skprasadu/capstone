@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 
 @dataclass
@@ -14,7 +14,7 @@ class AgentProfile:
     safety_notes: List[str] = field(default_factory=list)
 
     def matches(self, topic: str) -> bool:
-        topic_lower = topic.lower()
+        topic_lower = (topic or "").lower()
         return any(keyword in topic_lower for keyword in self.routing_keywords)
 
 
@@ -22,6 +22,7 @@ def build_registry() -> Dict[str, AgentProfile]:
     """Return the configured agents keyed by an identifier."""
 
     return {
+        # IMPORTANT: finance_qa is the fallback; do NOT let it steal tax/portfolio/etc.
         "finance_qa": AgentProfile(
             name="Finance Q&A Agent",
             description="Provides general-purpose financial education and definitions.",
@@ -50,11 +51,12 @@ def build_registry() -> Dict[str, AgentProfile]:
             name="Market Analysis Agent",
             description="Shares market context and trend highlights using cached data feeds.",
             responsibilities=[
-                "Summarize index and sector movements",
-                "Call out unusual volatility or volume",
+                "Explain volatility and macro terms",
+                "Summarize broad market context",
                 "Provide risk-aware takeaways for beginners",
             ],
-            routing_keywords=["market", "index", "sector", "volatility", "trend", "macro"],
+            # NOTE: removed generic "index" so "What is an index fund?" goes to finance_qa
+            routing_keywords=["market", "sector", "volatility", "trend", "macro", "s&p", "nasdaq", "dow"],
             output_format="Headline-style notes with percentage changes and source citations",
             safety_notes=["Avoid forward-looking predictions; focus on observed data."],
         ),
@@ -66,7 +68,7 @@ def build_registry() -> Dict[str, AgentProfile]:
                 "Map goals to savings or investment vehicles",
                 "Provide next-step checklists",
             ],
-            routing_keywords=["goal", "plan", "timeline", "budget", "retirement", "college"],
+            routing_keywords=["goal", "plan", "timeline", "budget", "retirement", "college", "down payment"],
             output_format="Step-by-step plan with milestones and links to education",
             safety_notes=["Encourage users to consult professionals for personal plans."],
         ),
@@ -97,14 +99,40 @@ def build_registry() -> Dict[str, AgentProfile]:
                 "Do not offer jurisdiction-specific filing advice",
             ],
         ),
+        "stock_quote": AgentProfile(
+            name="Stock Quote Agent",
+            description="Fetches the latest stock quote using Alpha Vantage.",
+            responsibilities=[
+                "Extract ticker symbol from the query",
+                "Fetch quote via Alpha Vantage (GLOBAL_QUOTE)",
+                "Return a short, factual snapshot",
+            ],
+            routing_keywords=["stock price", "quote", "current price", "price of"],
+            output_format="Short quote summary + raw JSON",
+            safety_notes=["Quotes may be delayed and rate-limited. Not investment advice."],
+        ),
     }
 
 
-def select_agent(topic: str) -> AgentProfile:
-    """Route to the most relevant agent based on keyword matching."""
-
+def select_agent_with_id(topic: str) -> Tuple[str, AgentProfile]:
+    """
+    Deterministic routing (simple + predictable):
+    - Prefer specialized agents first
+    - finance_qa is the fallback
+    """
     registry = build_registry()
-    for agent in registry.values():
+
+    # priority order matters
+    ordered = ["tax", "portfolio", "news", "goals", "market", "finance_qa"]
+    for agent_id in ordered:
+        agent = registry[agent_id]
         if agent.matches(topic):
-            return agent
-    return registry["finance_qa"]
+            return agent_id, agent
+
+    return "finance_qa", registry["finance_qa"]
+
+
+def select_agent(topic: str) -> AgentProfile:
+    """Backwards-compatible helper returning only the profile."""
+    _, agent = select_agent_with_id(topic)
+    return agent
