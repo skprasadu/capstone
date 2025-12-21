@@ -15,13 +15,20 @@ class RunRecord(TypedDict):
 
 
 class FinanceState(TypedDict, total=False):
+    # Input
     raw_payload: dict[str, Any]
 
+    # Added: these keys are used by nodes but were missing from the schema
+    metadata: dict[str, Any]
+    answer: str
+
+    # Routing + outputs
     route: dict[str, Any]
     retrieval: dict[str, Any]
     market: dict[str, Any]
 
+    # Final pipeline output
     result: dict[str, Any]
 
-    # memory (append-only)
+    # Memory (append-only)
     runs: Annotated[list[RunRecord], add]

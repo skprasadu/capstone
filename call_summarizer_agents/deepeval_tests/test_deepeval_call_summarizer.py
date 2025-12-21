@@ -2,29 +2,23 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-
 import pytest
 
-# ---- Opt-in guard (prevents token spend on normal `pytest`) ----
-DEEPEVAL_RUN = os.getenv("DEEPEVAL_RUN", "0").lower() in ("1", "true", "yes", "y")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-
-pytestmark = pytest.mark.skipif(
-    not (DEEPEVAL_RUN and OPENAI_KEY),
-    reason="DeepEval tests are opt-in. Set DEEPEVAL_RUN=1 and OPENAI_API_KEY.",
+from capstone_common.testing.deepeval import (
+    configure_deepeval_openai_env,
+    deepeval_pytestmark,
 )
 
-# Help DeepEval pick OpenAI as the judge model (safe defaults)
-if OPENAI_KEY:
-    os.environ.setdefault("USE_OPENAI_MODEL", "1")
-    os.environ.setdefault("OPENAI_MODEL_NAME", os.getenv("DEEPEVAL_OPENAI_MODEL", "gpt-4o-mini"))
+pytestmark = deepeval_pytestmark()
+configure_deepeval_openai_env()
+
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
 from call_summarizer_agents.agents.summarization_agent import SummarizationAgent
-
 
 def test_call_summary_geval_correctness():
     transcript_path = (
