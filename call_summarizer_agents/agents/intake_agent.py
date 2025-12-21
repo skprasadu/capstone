@@ -10,11 +10,7 @@ from openai import OpenAI
 
 from call_summarizer_agents.utils.validation import CallInput
 
-try:
-    from langsmith.wrappers import wrap_openai
-except Exception:
-    wrap_openai = None
-
+from capstone_common.llm.openai_client import get_openai_client
 
 # Matches: Karla: "Hello..."
 _SPEAKER_LINE = re.compile(r'^\s*([A-Za-z][A-Za-z0-9_.\- ]{0,40})\s*:\s*(.*)\s*$')
@@ -150,11 +146,11 @@ class CallIntakeAgent:
         self.openai_model = openai_model
         self.temperature = temperature
 
-        if client is None and openai_api_key:
-            client = OpenAI(api_key=openai_api_key)
-        if client and wrap_openai:
-            client = wrap_openai(client)
-        self._openai_client: Any | None = client
+        self._openai_client: Any | None = get_openai_client(
+            openai_api_key,
+            client=client,
+            wrap_langsmith=True,
+        )
 
     def __call__(self, raw_payload: Dict[str, Any]) -> CallInput:
         payload = CallInput(**raw_payload)

@@ -3,7 +3,7 @@ from call_summarizer_agents.config.settings import AppSettings
 from call_summarizer_agents.pipeline import CallSummarizationPipeline
 
 
-SAMPLE_TRANSCRIPT = Path("../call_summarizer_agents/data/sample_transcripts/sample_call.txt")
+SAMPLE_TRANSCRIPT = Path("./call_summarizer_agents/data/sample_transcripts/sample_call.txt")
 
 
 def test_pipeline_runs_with_sample_transcript():

@@ -10,7 +10,7 @@ from openai import OpenAI
 from ai_finance_assistant.src.core.disclaimers import attach_disclaimer
 from ai_finance_assistant.src.data.knowledge_base import seed_articles
 from ai_finance_assistant.src.utils.config_loader import load_config
-
+from capstone_common.llm.openai_client import get_openai_client_from_env
 
 @dataclass
 class RetrievedDocument:
@@ -30,10 +30,7 @@ def _fallback_docs() -> List[RetrievedDocument]:
 
 
 def _openai_client() -> OpenAI | None:
-    key = os.getenv("OPENAI_API_KEY")
-    if not key:
-        return None
-    return OpenAI(api_key=key)
+    return get_openai_client_from_env("OPENAI_API_KEY", wrap_langsmith=False)
 
 
 def _embed(client: OpenAI, model: str, texts: list[str]) -> list[list[float]]:

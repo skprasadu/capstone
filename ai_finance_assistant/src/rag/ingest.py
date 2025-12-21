@@ -9,7 +9,7 @@ from openai import OpenAI
 
 from ai_finance_assistant.src.data.knowledge_base import seed_articles
 from ai_finance_assistant.src.utils.config_loader import load_config
-
+from capstone_common.llm.openai_client import require_openai_client_from_env
 
 def _get_cfg() -> dict[str, Any]:
     return load_config()
@@ -24,10 +24,9 @@ def _chroma_params(cfg: dict[str, Any]) -> tuple[str, int, str]:
 
 
 def _openai_client() -> OpenAI:
-    key = os.getenv("OPENAI_API_KEY")
-    if not key:
-        raise RuntimeError("OPENAI_API_KEY is required to embed documents for Chroma ingestion.")
-    return OpenAI(api_key=key)
+    # Keep behavior: hard fail if missing
+    client = require_openai_client_from_env("OPENAI_API_KEY", wrap_langsmith=False)
+    return client
 
 
 def _embed(client: OpenAI, model: str, texts: list[str]) -> list[list[float]]:

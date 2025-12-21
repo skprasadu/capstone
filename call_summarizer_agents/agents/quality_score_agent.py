@@ -8,11 +8,7 @@ from openai import OpenAI
 
 from call_summarizer_agents.utils.validation import QualityScore
 
-try:
-    from langsmith.wrappers import wrap_openai
-except Exception:
-    wrap_openai = None
-
+from capstone_common.llm.openai_client import get_openai_client
 
 _QA_TOOL = {
     "type": "function",
@@ -68,12 +64,11 @@ class QualityScoreAgent:
         self.temperature = temperature
 
         # Optional OpenAI client for tool-calling QA
-        if client is None and openai_api_key:
-            client = OpenAI(api_key=openai_api_key)
-        if client and wrap_openai:
-            client = wrap_openai(client)
-        self._openai_client: Optional[Any] = client
-
+        self._openai_client: Optional[Any] = get_openai_client(
+            openai_api_key,
+            client=client,
+            wrap_langsmith=True,
+        )
     def __call__(self, payload: Dict[str, Any]) -> QualityScore:
         # Prefer LLM tool-calling if configured; fallback to heuristic always exists.
         llm_score = self._score_with_llm(payload) if self._openai_client else None
